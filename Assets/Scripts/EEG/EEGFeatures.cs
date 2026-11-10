@@ -1,16 +1,26 @@
+using System;
 using UnityEngine;
 
-public class EEGFeatures : MonoBehaviour
+[Serializable]
+public class EEGFeatures
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
+    [Range(0f, 1f)] public float delta;
+    [Range(0f, 1f)] public float theta;
+    [Range(0f, 1f)] public float alpha;
+    [Range(0f, 1f)] public float beta;
+    [Range(0f, 1f)] public float gamma;
 
-    // Update is called once per frame
-    void Update()
+    public EEGFeatures(
+        float delta = 0.5f,
+        float theta = 0.5f,
+        float alpha = 0.5f,
+        float beta = 0.5f,
+        float gamma = 0.5f)
     {
-        
+        this.delta = delta;
+        this.theta = theta;
+        this.alpha = alpha;
+        this.beta = beta;
+        this.gamma = gamma;
     }
 }

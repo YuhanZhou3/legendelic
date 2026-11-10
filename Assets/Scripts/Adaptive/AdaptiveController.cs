@@ -2,15 +2,25 @@ using UnityEngine;
 
 public class AdaptiveController : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
+    public FeatureProcessor processor;
+    public EnvironmentController environment;
 
-    // Update is called once per frame
     void Update()
     {
-        
+        if (processor == null || environment == null)
+            return;
+
+        EEGFeatures f = processor.ProcessedFeatures;
+
+        EnvironmentParameters parameters =
+            new EnvironmentParameters();
+
+        parameters.particleSpeed = f.alpha;
+        parameters.particleIntensity = f.gamma;
+        parameters.waveAmplitude = f.theta;
+        parameters.lightIntensity = f.beta;
+        parameters.fogDensity = f.delta;
+
+        environment.ApplyParameters(parameters);
     }
 }

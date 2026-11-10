@@ -1,15 +1,17 @@
+
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
+    [Header("Movement")]
     [SerializeField] private float WalkSpeed = 5.5f;
     [SerializeField] private float RunningSpeed = 9.0f;
-
     [SerializeField] private float JumpForce = 8.0f;
     [SerializeField] private float Gravity = 20.0f;
 
+    [Header("Looking")]
     [SerializeField] private float LookSensitivity = 0.2f;
     [SerializeField] private float LookAngleLimit = 90.0f;
 
@@ -20,11 +22,14 @@ public class PlayerController : MonoBehaviour
     private InputAction runInput;
     private InputAction jumpInput;
 
-    private float currentMoveSpeed = 0f;
+    private float currentMoveSpeed;
     private Vector3 moveDirection = Vector3.zero;
     private float lookAngle = 0f;
     private bool jumped = false;
 
+    // true = mouse interacts with UI
+    // false = mouse controls camera
+    private bool uiMode = true;
 
     private void Start()
     {
@@ -35,23 +40,46 @@ public class PlayerController : MonoBehaviour
         runInput = InputSystem.actions.FindAction("Sprint");
         jumpInput = InputSystem.actions.FindAction("Jump");
 
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
         currentMoveSpeed = WalkSpeed;
 
         jumpInput.started += Jumped;
+
+        SetUIMode(true);
+    }
+
+    private void OnDestroy()
+    {
+        if (jumpInput != null)
+            jumpInput.started -= Jumped;
     }
 
     private void Update()
     {
+        // Toggle between UI and exploration modes
+        if (Keyboard.current != null)
+        {
+            if (Keyboard.current.tabKey.wasPressedThisFrame)
+                SetUIMode(!uiMode);
+
+            if (Keyboard.current.escapeKey.wasPressedThisFrame)
+                SetUIMode(true);
+        }
+
+        // Don't control the player while interacting with UI
+        if (uiMode)
+            return;
+
         Vector2 moveVector = moveInput.ReadValue<Vector2>();
-        Vector2 mouseDelta = Mouse.current.delta.ReadValue();
+        Vector2 mouseDelta = Mouse.current != null
+            ? Mouse.current.delta.ReadValue()
+            : Vector2.zero;
 
         if (!characterController.isGrounded)
             jumped = false;
 
-        currentMoveSpeed = runInput.IsPressed() ? RunningSpeed : WalkSpeed;
+        currentMoveSpeed = runInput.IsPressed()
+            ? RunningSpeed
+            : WalkSpeed;
 
         HandleMovement(moveVector);
         HandleLooking(mouseDelta);
@@ -64,14 +92,19 @@ public class PlayerController : MonoBehaviour
 
         float oldY = moveDirection.y;
 
-        Vector2 newSpeed = new Vector2(moveVector.y * currentMoveSpeed, moveVector.x * currentMoveSpeed);
+        Vector2 newSpeed = new Vector2(
+            moveVector.y * currentMoveSpeed,
+            moveVector.x * currentMoveSpeed
+        );
 
         moveDirection = (forward * newSpeed.x) + (right * newSpeed.y);
-        moveDirection.y = (jumped && characterController.isGrounded) ? JumpForce : oldY;
+
+        moveDirection.y = (jumped && characterController.isGrounded)
+            ? JumpForce
+            : oldY;
 
         if (!characterController.isGrounded)
             moveDirection.y -= Gravity * Time.deltaTime;
-
 
         characterController.Move(moveDirection * Time.deltaTime);
     }
@@ -79,10 +112,17 @@ public class PlayerController : MonoBehaviour
     private void HandleLooking(Vector2 mouseDelta)
     {
         lookAngle += -mouseDelta.y * LookSensitivity;
-        lookAngle = Mathf.Clamp(lookAngle, -LookAngleLimit, LookAngleLimit);
+        lookAngle = Mathf.Clamp(
+            lookAngle,
+            -LookAngleLimit,
+            LookAngleLimit
+        );
 
-        mainCamera.transform.localRotation = Quaternion.Euler(lookAngle, 0, 0);
-        transform.rotation *= Quaternion.Euler(0, mouseDelta.x * LookSensitivity, 0);
+        mainCamera.transform.localRotation =
+            Quaternion.Euler(lookAngle, 0, 0);
+
+        transform.rotation *=
+            Quaternion.Euler(0, mouseDelta.x * LookSensitivity, 0);
     }
 
     private void Jumped(InputAction.CallbackContext _)
@@ -90,4 +130,14 @@ public class PlayerController : MonoBehaviour
         jumped = true;
     }
 
+    public void SetUIMode(bool enabled)
+    {
+        uiMode = enabled;
+
+        Cursor.lockState = uiMode
+            ? CursorLockMode.None
+            : CursorLockMode.Locked;
+
+        Cursor.visible = uiMode;
+    }
 }
